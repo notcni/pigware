@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PigWare | Clean & Interactive</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #0F0E0E; /* Fondo oscuro puro */
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            color: #ffffff;
+        }
+
+        /* Canvas de partículas en el fondo */
+        #particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Contenedor del contenido (centrado y libre) */
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            pointer-events: none; /* Deja pasar el ratón al canvas */
+        }
+
+        /* El botón sí debe recibir clicks */
+        .btn-container {
+            pointer-events: auto;
+        }
+
+        /* Logo y Texto libres */
+        .logo {
+            width: 90px;
+            height: auto;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 10px rgba(255, 29, 101, 0.3));
+        }
+
+        .animated-text {
+            font-size: 5rem;
+            font-weight: 800;
+            letter-spacing: -2px;
+            background: linear-gradient(90deg, #ffffff 0%, #ff1d65 50%, #ffffff 100%);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: shine 5s linear infinite;
+            margin-bottom: 50px;
+            text-align: center;
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        /* Botón Clean y Minimalista */
+        .clean-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: white;
+            padding: 18px 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px; /* Borde más cuadrado y serio */
+            background: rgba(15, 14, 14, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+
+        .clean-btn:hover {
+            border-color: #ff1d65;
+            background: rgba(255, 29, 101, 0.05);
+            box-shadow: 0 0 20px rgba(255, 29, 101, 0.2),
+                        inset 0 0 10px rgba(255, 29, 101, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .badge {
+            background-color: transparent;
+            border: 1px solid #ff1d65;
+            color: #ff1d65;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .features {
+            font-size: 0.8rem;
+            color: #888;
+            font-weight: 300;
+            letter-spacing: 1px;
+            transition: color 0.3s ease;
+        }
+
+        .clean-btn:hover .features {
+            color: #ccc;
+        }
+
+        /* Footer */
+        footer {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #444;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            z-index: 10;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .animated-text { font-size: 3.5rem; }
+            .logo { width: 70px; }
+            .clean-btn { padding: 15px 25px; }
+            .title { font-size: 1rem; }
+            .features { font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Lienzo para las partículas -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Contenido principal -->
+    <div class="content">
+        <img src="Proyecto nuevo (24).svg" alt="PigWare Logo" class="logo">
+        <h1 class="animated-text">PigWare</h1>
+        
+        <div class="btn-container">
+            <a href="#" class="clean-btn">
+                <div class="btn-top">
+                    <span class="badge">Free</span>
+                    <span class="title">External Read Only ESP</span>
+                </div>
+                <div class="features">Box • Name • Healthbar</div>
+            </a>
+        </div>
+    </div>
+
+    <footer>free software</footer>
+
+    <!-- Script de Partículas Interactivas -->
+    <script>
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let particlesArray = [];
+        const mouse = { x: null, y: null, radius: 150 };
+
+        // Ajustar tamaño del canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Detectar movimiento del ratón
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = event.x;
+            mouse.y = event.y;
+        });
+        window.addEventListener('mouseout', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+
+        // Clase Partícula
+        class Particle {
+            constructor(x, y, dx, dy, size) {
+                this.x = x;
+                this.y = y;
+                this.dx = dx;
+                this.dy = dy;
+                this.size = size;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 29, 101, 0.5)'; // Color de las partículas
+                ctx.fill();
+            }
+            update() {
+                // Rebote en los bordes
+                if (this.x > canvas.width || this.x < 0) this.dx = -this.dx;
+                if (this.y > canvas.height || this.y < 0) this.dy = -this.dy;
+
+                // Interacción con el ratón
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Mover partículas
+                this.x += this.dx;
+                this.y += this.dy;
+                
+                this.draw();
+            }
+        }
+
+        // Inicializar red de partículas
+        function init() {
+            particlesArray = [];
+            let numberOfParticles = (canvas.width * canvas.height) / 12000;
+            for (let i = 0; i < numberOfParticles; i++) {
+                let size = Math.random() * 2 + 1;
+                let x = Math.random() * (innerWidth - size * 2) + size;
+                let y = Math.random() * (innerHeight - size * 2) + size;
+                let dx = (Math.random() - 0.5) * 1;
+                let dy = (Math.random() - 0.5) * 1;
+                particlesArray.push(new Particle(x, y, dx, dy, size));
+            }
+        }
+
+        // Conectar partículas cercanas con líneas
+        function connect() {
+            for (let a = 0; a < particlesArray.length; a++) {
+                for (let b = a; b < particlesArray.length; b++) {
+                    let dx = particlesArray[a].x - particlesArray[b].x;
+                    let dy = particlesArray[a].y - particlesArray[b].y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 100) {
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - distance/100})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                        ctx.stroke();
+                    }
+                }
+                
+                // Conectar con el ratón si está cerca
+                if (mouse.x != null) {
+                    let dxMouse = particlesArray[a].x - mouse.x;
+                    let dyMouse = particlesArray[a].y - mouse.y;
+                    let distanceMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
+                    if (distanceMouse < mouse.radius) {
+                        ctx.strokeStyle = `rgba(255, 29, 101, ${1 - distanceMouse/mouse.radius})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                        ctx.lineTo(mouse.x, mouse.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        // Bucle de animación
+        function animate() {
+            requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, innerWidth, innerHeight);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+            }
+            connect();
+        }
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
